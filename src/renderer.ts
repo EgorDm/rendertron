@@ -103,9 +103,9 @@ export class Renderer {
       isMobile,
     });
 
-    // if (isMobile && this.config.setUserAgentMobile) {
-    //   page.setUserAgent(MOBILE_USERAGENT);
-    // }
+    if (isMobile && this.config.setUserAgentMobile) {
+      await page.setUserAgent(MOBILE_USERAGENT);
+    }
 
     if (timezoneId) {
       try {
@@ -123,26 +123,26 @@ export class Renderer {
 
     await page.setExtraHTTPHeaders(this.config.reqHeaders);
 
-    page.evaluateOnNewDocument('customElements.forcePolyfill = true');
-    page.evaluateOnNewDocument('ShadyDOM = {force: true}');
-    page.evaluateOnNewDocument('ShadyCSS = {shimcssproperties: true}');
+    await page.evaluateOnNewDocument('customElements.forcePolyfill = true');
+    await page.evaluateOnNewDocument('ShadyDOM = {force: true}');
+    await page.evaluateOnNewDocument('ShadyCSS = {shimcssproperties: true}');
 
     await page.setRequestInterception(true);
 
-    page.addListener('request', (interceptedRequest: puppeteer.Request) => {
+    page.on('request', (interceptedRequest) => {
       if (this.restrictRequest(interceptedRequest.url())) {
         interceptedRequest.abort();
       } else {
         interceptedRequest.continue();
       }
-    });
+    })
 
-    let response: puppeteer.Response | null = null;
+    let response: puppeteer.HTTPResponse | null = null;
     // Capture main frame response. This is used in the case that rendering
     // times out, which results in puppeteer throwing an error. This allows us
     // to return a partial response for what was able to be rendered in that
     // time frame.
-    page.addListener('response', (r: puppeteer.Response) => {
+    page.on('response', (r) => {
       if (!response) {
         response = r;
       }
@@ -154,6 +154,9 @@ export class Renderer {
         timeout: this.config.timeout,
         waitUntil: 'networkidle0',
       });
+      if(response === null) {
+        response = await page.waitForResponse(() => true)
+      }
     } catch (e) {
       console.error(e);
     }
@@ -262,12 +265,12 @@ export class Renderer {
     });
 
     if (isMobile && this.config.setUserAgentMobile) {
-      page.setUserAgent(MOBILE_USERAGENT);
+      await page.setUserAgent(MOBILE_USERAGENT);
     }
 
     await page.setRequestInterception(true);
 
-    page.addListener('request', (interceptedRequest: puppeteer.Request) => {
+    page.on('request', (interceptedRequest) => {
       if (this.restrictRequest(interceptedRequest.url())) {
         interceptedRequest.abort();
       } else {
@@ -279,7 +282,7 @@ export class Renderer {
       await page.emulateTimezone(timezoneId);
     }
 
-    let response: puppeteer.Response | null = null;
+    let response: puppeteer.HTTPResponse | null = null;
 
     try {
       // Navigate to page. Wait until there are no oustanding network requests.

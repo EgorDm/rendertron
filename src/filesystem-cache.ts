@@ -87,7 +87,7 @@ export class FilesystemCache {
   }
 
   async clearAllCache() {
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       fs.readdir(this.getDir(''), (err, files) => {
         if (err) throw err;
         for (const file of files) {
